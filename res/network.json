@@ -1,0 +1,17 @@
+{
+  "layers": [
+    {
+      "neuron_num": 1,
+      "is_output": false,
+      "bias": 1
+    },
+    {
+      "neuron_num": 10,
+      "is_output": false,
+      "bias": 0
+    },
+    {
+
+    }
+  ]
+}
