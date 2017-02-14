@@ -44,12 +44,18 @@ for i in range(neuron_layers_length):
 
 # training step
 for j in range(data["statistics"]["train_to_steps"]):
-    # for j in range(10):
     # Calculate forward through the network.
     # neuron_layers[0] = Layer(X, neuron_num=1, bias=1)
     # neuron_layers[1] = Layer(nonlin(np.dot(neuron_layers[0].value, synapse_sets[0].value)),
     #                          neuron_num=10)
     # neuron_layers[2] = Layer(nonlin(np.dot(neuron_layers[1].value, synapse_sets[1].value)), is_output=True)
+
+    for i in range(neuron_layers_length):
+        value = X if i == 0 else nonlin(np.dot(neuron_layers[i - 1].value, synapse_sets[i - 1].value))
+
+        neuron_layers[i] = Layer(value, neuron_num=data["structure"][i]["neuron_num"],
+                                 bias=data["structure"][i]["bias"],
+                                 is_output=(i + 1 == neuron_layers_length))
 
     # Backpropagation of errors using the chain rule.
     neuron_layers[2].calc_error(y)
