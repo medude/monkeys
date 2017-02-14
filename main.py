@@ -17,52 +17,58 @@ from functions import *
 # calculates the derivative of the function, which is used in the error backpropogation step.
 
 # input and output data
-with open("res/us_pop_train.json", "r") as data_file:
+with open("input/input.json", "r") as data_file:
     data = json.loads(data_file.read())
-X = np.array(data[0])
-y = np.array(data[1])
+X = np.array(data["train"]["input"])
+y = np.array(data["train"]["output"])
 
 # make it deterministic
 np.random.seed(1)
 
-# neuron layers
-neuron_layers = [
-    Layer(None, None, neuron_num=1, bias=1),
-    Layer(None, None, neuron_num=10),
-    Layer(None, None, neuron_num=2, is_output=True)
-]
-
 # synapses
-synapse_sets = [
-    SynapseSet(prev_layer=neuron_layers[0], next_layer=neuron_layers[1]),
-    SynapseSet(prev_layer=neuron_layers[1], next_layer=neuron_layers[2])
-]
+synapse_sets = []
+# fill the synapse sets
+for i in range(len(data["structure"]) - 1):
+    synapse_sets.append(SynapseSet(prev_layer=data["structure"][i], next_layer=data["structure"][i + 1]))
+
+# neuron layers
+neuron_layers = []
+# fill neuron layers
+neuron_layers_length = len(data["structure"])
+
+for i in range(neuron_layers_length):
+    value = X if i == 0 else nonlin(np.dot(neuron_layers[i - 1].value, synapse_sets[i - 1].value))
+
+    neuron_layers.append(Layer(value, neuron_num=data["structure"][i]["neuron_num"], bias=data["structure"][i]["bias"],
+                               is_output=(i + 1 == neuron_layers_length)))
 
 # training step
-for j in range(240000):
+for j in range(data["statistics"]["train_to_steps"]):
     # for j in range(10):
     # Calculate forward through the network.
-    neuron_layers[0] = Layer(X, synapse_sets[0], neuron_num=1, bias=1)
-    neuron_layers[1] = Layer(nonlin(np.dot(neuron_layers[0].value, synapse_sets[0].value)), synapse_sets[1],
-                             neuron_num=10)
-    neuron_layers[2] = Layer(nonlin(np.dot(neuron_layers[1].value, synapse_sets[1].value)), None, is_output=True)
+    # neuron_layers[0] = Layer(X, neuron_num=1, bias=1)
+    # neuron_layers[1] = Layer(nonlin(np.dot(neuron_layers[0].value, synapse_sets[0].value)),
+    #                          neuron_num=10)
+    # neuron_layers[2] = Layer(nonlin(np.dot(neuron_layers[1].value, synapse_sets[1].value)), is_output=True)
 
     # Backpropagation of errors using the chain rule.
     neuron_layers[2].calc_error(y)
     neuron_layers[2].calc_delta()
-    neuron_layers[1].calc_error(neuron_layers[2])
+    neuron_layers[1].calc_error(neuron_layers[2], synapse_sets[1])
     neuron_layers[1].calc_delta()
 
     # Sometimes print out the error
-    if (j % 10000) == 0:
+    if (j % data["statistics"]["record_error_every"]) == 0:
         print("Error: " + str(np.mean(np.abs(neuron_layers[2].error))))
+        if np.mean(np.abs(neuron_layers[2].error)) <= data["statistics"]["train_to_error"]:
+            break
 
     synapse_sets[0].set_layers(neuron_layers[0], neuron_layers[1])
     synapse_sets[1].set_layers(neuron_layers[1], neuron_layers[2])
 
     # update weights (no learning rate term)
-    synapse_sets[1].update_weights()
-    synapse_sets[0].update_weights()
+    for synapse_set in synapse_sets:
+        synapse_set.update_weights()
 
 print("Output after training")
 print(neuron_layers[2].value)

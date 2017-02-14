@@ -7,8 +7,8 @@ class SynapseSet:
         self.next_layer = next_layer
 
         self.value = 2 * np.random.random((
-            prev_layer.neuron_num + prev_layer.bias,
-            next_layer.neuron_num + next_layer.bias
+            prev_layer["neuron_num"] + prev_layer["bias"],
+            next_layer["neuron_num"] + next_layer["bias"]
         )) - 1
 
     def set_layers(self, prev_layer, next_layer, calc_value=False):
