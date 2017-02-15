@@ -21,3 +21,6 @@ class Layer:
     def calc_delta(self):
         self.delta = self.error * nonlin(self.value, deriv=True)
         return self.delta
+
+    def change_value(self, value):
+        self.value = value

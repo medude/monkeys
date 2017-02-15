@@ -16,23 +16,27 @@ from functions import *
 # The implementation of this function does double duty. If the deriv=True flag is passed in, the function instead
 # calculates the derivative of the function, which is used in the error backpropogation step.
 
+###########################
+# define everything       #
+###########################
+# synapses
+synapse_sets = []
+# neuron layers
+neuron_layers = []
+
+# make the network deterministic
+np.random.seed(1)
+
 # input and output data
 with open("input/input.json", "r") as data_file:
     data = json.loads(data_file.read())
 X = np.array(data["train"]["input"])
 y = np.array(data["train"]["output"])
 
-# make it deterministic
-np.random.seed(1)
-
-# synapses
-synapse_sets = []
 # fill the synapse sets
 for i in range(len(data["structure"]) - 1):
     synapse_sets.append(SynapseSet(prev_layer=data["structure"][i], next_layer=data["structure"][i + 1]))
 
-# neuron layers
-neuron_layers = []
 # fill neuron layers
 neuron_layers_length = len(data["structure"])
 for i in range(neuron_layers_length):
@@ -40,53 +44,41 @@ for i in range(neuron_layers_length):
     neuron_layers.append(Layer(value, neuron_num=data["structure"][i]["neuron_num"], bias=data["structure"][i]["bias"],
                                is_output=(i + 1 == neuron_layers_length)))
 
+# set the synapses to have the right layers
+for i in range(neuron_layers_length - 1):
+    synapse_sets[i].set_layers(neuron_layers[i], neuron_layers[i + 1])
+
 # training step
 for j in range(data["statistics"]["train_to_steps"]):
     # Calculate forward through the network.
     for i in range(neuron_layers_length):
         value = X if i == 0 else nonlin(np.dot(neuron_layers[i - 1].value, synapse_sets[i - 1].value))
 
-        neuron_layers[i] = Layer(value, neuron_num=data["structure"][i]["neuron_num"],
-                                 bias=data["structure"][i]["bias"],
-                                 is_output=(i + 1 == neuron_layers_length))
+        neuron_layers[i].change_value(value)
 
     # Backpropagation of errors using the chain rule.
-    # neuron_layers[2].calc_error(y)
-    # neuron_layers[2].calc_delta()
-    # neuron_layers[1].calc_error(neuron_layers[2], synapse_sets[1])
-    # neuron_layers[1].calc_delta()
-
-    for i, neuron_layer in reversed(neuron_layers[:neuron_layers_length - 2]):
-        k = neuron_layers_length - i
-        print("i: "+str(i))
-        print("k: "+str(k))
-        print("len: "+str(neuron_layers_length))
+    i = 0
+    for neuron_layer in reversed(neuron_layers[neuron_layers_length - 2:]):
         if i == 0:
             neuron_layer.calc_error(y)
         else:
             neuron_layer.calc_error(neuron_layers[i + 1], synapse_sets[i])
         neuron_layer.calc_delta()
+        i += 1
 
     # Sometimes print out the error
     if (j % data["statistics"]["record_error_every"]) == 0:
-        print("Error: " + str(np.mean(np.abs(neuron_layers[2].error))))
-        if np.mean(np.abs(neuron_layers[2].error)) <= data["statistics"]["train_to_error"]:
+        error = np.mean(np.abs(neuron_layers[neuron_layers_length - 1].error))
+        print("Error: " + str(error))
+        if error <= data["statistics"]["train_to_error"]:
             break
-
-    synapse_sets[0].set_layers(neuron_layers[0], neuron_layers[1])
-    synapse_sets[1].set_layers(neuron_layers[1], neuron_layers[2])
 
     # update weights (no learning rate term)
     for synapse_set in synapse_sets:
         synapse_set.update_weights()
 
 print("Output after training")
-print(neuron_layers[2].value)
-
-print("Weights")
-
-print("Synapse 0: " + str(synapse_sets[0].value) + "\n")
-print("Synapse 1: " + str(synapse_sets[1].value))
+print(neuron_layers[neuron_layers_length - 1].value)
 
 X = X.flatten("F")[:X.shape[0]]
 
