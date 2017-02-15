@@ -35,10 +35,8 @@ for i in range(len(data["structure"]) - 1):
 neuron_layers = []
 # fill neuron layers
 neuron_layers_length = len(data["structure"])
-
 for i in range(neuron_layers_length):
     value = X if i == 0 else nonlin(np.dot(neuron_layers[i - 1].value, synapse_sets[i - 1].value))
-
     neuron_layers.append(Layer(value, neuron_num=data["structure"][i]["neuron_num"], bias=data["structure"][i]["bias"],
                                is_output=(i + 1 == neuron_layers_length)))
 
@@ -57,6 +55,17 @@ for j in range(data["statistics"]["train_to_steps"]):
     # neuron_layers[2].calc_delta()
     # neuron_layers[1].calc_error(neuron_layers[2], synapse_sets[1])
     # neuron_layers[1].calc_delta()
+
+    for i, neuron_layer in reversed(neuron_layers[:neuron_layers_length - 2]):
+        k = neuron_layers_length - i
+        print("i: "+str(i))
+        print("k: "+str(k))
+        print("len: "+str(neuron_layers_length))
+        if i == 0:
+            neuron_layer.calc_error(y)
+        else:
+            neuron_layer.calc_error(neuron_layers[i + 1], synapse_sets[i])
+        neuron_layer.calc_delta()
 
     # Sometimes print out the error
     if (j % data["statistics"]["record_error_every"]) == 0:
